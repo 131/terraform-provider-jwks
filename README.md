@@ -82,8 +82,9 @@ To use a local build before publishing:
 GOEXPERIMENT=jsonv2 go build -o "$PWD/bin/terraform-provider-jwks" .
 ```
 
-Add `"131/jwks" = "/absolute/path/to/terraform-provider-jwks/bin"` to the
-`provider_installation.dev_overrides` block in your Terraform CLI configuration.
+In the `provider_installation.dev_overrides` block of your Terraform CLI
+configuration, map the provider source address used by your configuration to
+the absolute path of the local `bin` directory.
 Development overrides let `terraform plan` use the local binary without a
 published registry version. Do not run `terraform init` to install an unpublished
 provider. Remove the override after publishing and pin the released version in
@@ -99,9 +100,9 @@ make checks  # fmt, vet, staticcheck, gosec
 GitHub Actions runs acceptance tests, `go vet`, and a build on pushes and pull
 requests. The build workflow can also be started manually.
 
-Pushing a `v*` tag runs tests and GoReleaser, which builds the provider archives,
-signs SHA-256 checksums, and creates a draft GitHub release. Configure the
-repository secrets `GPG_PRIVATE_KEY` and `PASSPHRASE`, as for the other `131`
-Terraform providers. `GITHUB_TOKEN` is supplied automatically by GitHub Actions.
-Publish the draft release when its assets are ready for Terraform Registry;
-register the signing public key in the `131` namespace.
+Pushing a `v*` tag runs GoReleaser, which builds the provider archives,
+signs SHA-256 checksums, and publishes the GitHub release directly.
+Tests run in the separate build workflow. Configure the repository secrets
+`GPG_PRIVATE_KEY` and `PASSPHRASE`. `GITHUB_TOKEN` is supplied automatically by
+GitHub Actions. Register the signing public key in the publisher's Terraform
+Registry namespace.
