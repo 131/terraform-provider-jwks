@@ -1,5 +1,11 @@
 name: build
-on:  [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+env:
+  GOEXPERIMENT: jsonv2
 
 jobs:
   build:
@@ -12,9 +18,15 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: 'go.mod'
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_wrapper: false
       - name: Test
-        env:
-          GOEXPERIMENT: jsonv2
         run: |
           TF_ACC=1 go test ./... -v -trimpath -coverprofile=coverage.out
           go tool cover -func=coverage.out
+      - name: Vet
+        run: go vet ./...
+      - name: Build
+        run: go build -trimpath -o bin/terraform-provider-jwks .

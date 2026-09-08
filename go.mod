@@ -1,4 +1,4 @@
-module github.com/iwarapter/terraform-provider-jwks
+module github.com/131/terraform-provider-jwks
 
 go 1.26.2
 

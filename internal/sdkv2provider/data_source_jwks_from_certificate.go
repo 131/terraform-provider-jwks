@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base32"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/lestrrat-go/jwx/v4/cert"
 	"github.com/lestrrat-go/jwx/v4/jwk"
 )
@@ -40,6 +42,13 @@ func dataSourceJwksFromCertificateSchema() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: `Used to override the kid field of the JWK`,
+		},
+		"kid_format": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Default:      "certificate",
+			ValidateFunc: validation.StringInSlice([]string{"certificate", "libtrust"}, false),
+			Description:  `Format of the generated kid: certificate (default) uses the base64url-encoded SHA-256 certificate fingerprint; libtrust uses the Docker/libtrust public-key ID, compatible with GitLab registry tokens (SHA-256 of DER SubjectPublicKeyInfo, first 30 bytes, uppercase base32 in colon-separated groups of four). An explicit kid takes precedence.`,
 		},
 		"use": {
 			Type:        schema.TypeString,
@@ -75,7 +84,10 @@ func dataSourceJwksFromCertificateRead(_ context.Context, d *schema.ResourceData
 	if k, ok := d.GetOk("kid"); ok {
 		kid = k.(string)
 	} else {
-		kid = calculateCertificateThumbprint(leaf)
+		kid, err = calculateCertificateKeyID(leaf, d.Get("kid_format").(string))
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	var use string
@@ -141,6 +153,27 @@ func calculateCertificateThumbprint(x509Cert *x509.Certificate) string {
 	hash := sha256.New()
 	hash.Write(x509Cert.Raw)
 	return base64.URLEncoding.EncodeToString(hash.Sum(nil))
+}
+
+func calculateCertificateKeyID(certificate *x509.Certificate, format string) (string, error) {
+	switch format {
+	case "certificate":
+		return calculateCertificateThumbprint(certificate), nil
+	case "libtrust":
+		der, err := x509.MarshalPKIXPublicKey(certificate.PublicKey)
+		if err != nil {
+			return "", fmt.Errorf("encoding public key for libtrust kid: %w", err)
+		}
+		digest := sha256.Sum256(der)
+		encoded := base32.StdEncoding.EncodeToString(digest[:30])
+		groups := make([]string, 0, len(encoded)/4)
+		for i := 0; i < len(encoded); i += 4 {
+			groups = append(groups, encoded[i:i+4])
+		}
+		return strings.Join(groups, ":"), nil
+	default:
+		return "", fmt.Errorf("unsupported kid_format %q", format)
+	}
 }
 
 func calculateKey(x509Cert *x509.Certificate, chain []*x509.Certificate, kid, use, alg string) (jwk.Key, error) {

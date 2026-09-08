@@ -9,8 +9,7 @@ Terraform 0.13 and later:
 terraform {
   required_providers {
     jwks = {
-      source = "iwarapter/jwks"
-      version = "0.0.1"
+      source = "131/jwks"
     }
   }
 }
