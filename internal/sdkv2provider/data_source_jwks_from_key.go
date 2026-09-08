@@ -8,7 +8,6 @@ import (
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 
@@ -68,7 +67,12 @@ func dataSourceJwksFromKeySchema() map[string]*schema.Schema {
 		"jwks": {
 			Type:        schema.TypeString,
 			Computed:    true,
-			Description: `The calculated JSON Web Key Sets.`,
+			Description: `JSON Web Key Set containing the public JWK in a keys array.`,
+		},
+		"jwk": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: `Public JSON Web Key with only public key primitives and configured alg, kid and use metadata.`,
 		},
 	}
 }
@@ -151,16 +155,12 @@ func dataSourceJwksFromKeyRead(_ context.Context, d *schema.ResourceData, m inte
 			return diag.FromErr(err)
 		}
 	}
-	b, err := json.Marshal(key)
-	if err != nil {
-		return diag.FromErr(err)
-	}
 	tb, err := key.Thumbprint(crypto.SHA256)
 	if err != nil {
 		return diag.Errorf("unable to generate fingerprint: %s", err)
 	}
 	d.SetId(hex.EncodeToString(tb))
-	return diag.FromErr(d.Set("jwks", string(b)))
+	return setPublicKeyOutputs(d, key)
 }
 
 func mldsaParamsFromOID(oid asn1.ObjectIdentifier) (*mldsa.Parameters, error) {

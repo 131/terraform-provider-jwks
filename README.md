@@ -2,8 +2,6 @@
 
 A Terraform provider for generating [JSON Web Key Sets (JWKS)](https://datatracker.ietf.org/doc/html/rfc7517) from keys and certificates.
 
-Fork of [iwarapter/terraform-provider-jwks](https://github.com/iwarapter/terraform-provider-jwks), prepared for the `131/jwks` namespace.
-
 ## Data Sources
 
 ### `jwks_from_key`
@@ -49,14 +47,6 @@ data "jwks_from_certificate" "example" {
 For Docker Distribution / GitLab container registry authentication:
 
 ```hcl
-terraform {
-  required_providers {
-    jwks = {
-      source = "131/jwks"
-    }
-  }
-}
-
 data "jwks_from_certificate" "gitlab_registry" {
   pem        = file("${path.module}/certificate.pem")
   kid_format = "libtrust"
@@ -71,8 +61,7 @@ encodes the first 30 bytes in uppercase base32 and separates groups of four
 characters with colons. This is the [Docker/libtrust key ID](https://github.com/docker/libtrust/blob/master/key.go)
 used by [GitLab registry tokens](https://github.com/gitlabhq/gitlabhq/blob/master/lib/json_web_token/rsa_token.rb).
 It stays stable when a certificate is renewed with the same public key. An
-explicit `kid` takes precedence over `kid_format`. Certificate metadata (`x5c`
-and `x5t#S256`) is unchanged.
+explicit `kid` takes precedence over `kid_format`.
 
 The same format is available for public and private keys:
 
@@ -91,6 +80,23 @@ so public and private inputs produce the same ID. The `libtrust` format
 requires a public key supported by Go's `x509.MarshalPKIXPublicKey`; unsupported
 key types return an error. Existing key formats remain usable with `"none"`
 or an explicit `kid`.
+
+## Public outputs
+
+Both data sources expose JSON strings:
+
+- `jwk`: a single public key object.
+- `jwks`: a key set containing that object, `{"keys": [<jwk>]}`.
+
+RSA outputs contain only `kty`, `n`, `e`, and any configured `alg`, `kid`, `use`.
+Other key types retain their public primitives (`crv`, `x`, `y` for EC;
+`crv`, `x` for OKP; `pub` for AKP). Private parameters and certificate metadata
+such as `x5c` and `x5t#S256` are never included in either output.
+
+This changes the previous `jwks` output, which contained a single object and
+could include private key material. Use `.jwk` where a single object is needed,
+or `.jwks` for consumers expecting a key set. Remove any manual `keys` wrapper
+around `.jwks`.
 
 ## Development
 

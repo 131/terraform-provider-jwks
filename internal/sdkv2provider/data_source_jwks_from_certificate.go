@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -17,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/lestrrat-go/jwx/v4/cert"
 	"github.com/lestrrat-go/jwx/v4/jwk"
 )
 
@@ -62,7 +60,12 @@ func dataSourceJwksFromCertificateSchema() map[string]*schema.Schema {
 		"jwks": {
 			Type:        schema.TypeString,
 			Computed:    true,
-			Description: `The calculated JWKS`,
+			Description: `JSON Web Key Set containing the public JWK in a keys array.`,
+		},
+		"jwk": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: `Public JSON Web Key with only public key primitives and configured alg, kid and use metadata. Certificate metadata is omitted.`,
 		},
 	}
 }
@@ -99,12 +102,7 @@ func dataSourceJwksFromCertificateRead(_ context.Context, d *schema.ResourceData
 		alg = u.(string)
 	}
 
-	key, err := calculateKey(leaf, certificates, kid, use, alg)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	jsonResult, err := json.Marshal(key)
+	key, err := calculateKey(leaf, kid, use, alg)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -114,7 +112,7 @@ func dataSourceJwksFromCertificateRead(_ context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 	d.SetId(hex.EncodeToString(tb))
-	return diag.FromErr(d.Set("jwks", string(jsonResult)))
+	return setPublicKeyOutputs(d, key)
 }
 
 func parseChain(chain [][]byte) ([]*x509.Certificate, error) {
@@ -165,21 +163,9 @@ func calculateCertificateKeyID(certificate *x509.Certificate, format string) (st
 	}
 }
 
-func calculateKey(x509Cert *x509.Certificate, chain []*x509.Certificate, kid, use, alg string) (jwk.Key, error) {
+func calculateKey(x509Cert *x509.Certificate, kid, use, alg string) (jwk.Key, error) {
 	key, err := jwk.Import[jwk.Key](x509Cert.PublicKey)
 	if err != nil {
-		return nil, err
-	}
-
-	x5c, err := processX5c(chain)
-	if err != nil {
-		return nil, err
-	}
-	if err = key.Set(jwk.X509CertChainKey, x5c); err != nil {
-		return nil, err
-	}
-
-	if err = key.Set(jwk.X509CertThumbprintS256Key, calculateCertificateThumbprint(x509Cert)); err != nil {
 		return nil, err
 	}
 
@@ -200,16 +186,6 @@ func calculateKey(x509Cert *x509.Certificate, chain []*x509.Certificate, kid, us
 	}
 
 	return key, nil
-}
-
-func processX5c(chain []*x509.Certificate) (*cert.Chain, error) {
-	var cc cert.Chain
-	for _, x509Cert := range chain {
-		if err := cc.AddString(base64.StdEncoding.EncodeToString(x509Cert.Raw)); err != nil {
-			return nil, err
-		}
-	}
-	return &cc, nil
 }
 
 func decodePem(certInput string) (*tls.Certificate, error) {

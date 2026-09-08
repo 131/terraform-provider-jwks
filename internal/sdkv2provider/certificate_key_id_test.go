@@ -22,7 +22,7 @@ func TestAccCertificateKeyIDFormats(t *testing.T) {
 		return fmt.Sprintf("data \"jwks_from_certificate\" \"test\" {\n pem = %q\n%s\n}", SingleCertificatePem, attributes)
 	}
 	checkKid := func(want string) resource.TestCheckFunc {
-		return resource.TestCheckResourceAttrWith("data.jwks_from_certificate.test", "jwks", func(value string) error {
+		return resource.TestCheckResourceAttrWith("data.jwks_from_certificate.test", "jwk", func(value string) error {
 			var key map[string]interface{}
 			if err := json.Unmarshal([]byte(value), &key); err != nil {
 				return err
@@ -94,7 +94,7 @@ func TestCertificateKeyIDRead(t *testing.T) {
 				t.Fatal(diags)
 			}
 			var key map[string]interface{}
-			if err := json.Unmarshal([]byte(d.Get("jwks").(string)), &key); err != nil {
+			if err := json.Unmarshal([]byte(d.Get("jwk").(string)), &key); err != nil {
 				t.Fatal(err)
 			}
 			if tc.want == "" {
@@ -103,9 +103,10 @@ func TestCertificateKeyIDRead(t *testing.T) {
 			if key["kid"] != tc.want {
 				t.Fatalf("kid = %v, want %q", key["kid"], tc.want)
 			}
-			if key["x5t#S256"] != calculateCertificateThumbprint(cert) {
-				t.Fatal("certificate thumbprint changed")
+			if _, ok := key["x5t#S256"]; ok {
+				t.Fatal("certificate metadata leaked")
 			}
+			assertPublicOutputs(t, d)
 		})
 	}
 }

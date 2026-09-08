@@ -69,7 +69,7 @@ func TestKeyIDPublicAndPrivate(t *testing.T) {
 						t.Fatal(diags)
 					}
 					var key map[string]interface{}
-					if err := json.Unmarshal([]byte(d.Get("jwks").(string)), &key); err != nil {
+					if err := json.Unmarshal([]byte(d.Get("jwk").(string)), &key); err != nil {
 						t.Fatal(err)
 					}
 					var expected interface{}
@@ -82,6 +82,7 @@ func TestKeyIDPublicAndPrivate(t *testing.T) {
 					if key["kid"] != expected {
 						t.Fatalf("%s: kid = %v, want %v", mode, key["kid"], expected)
 					}
+					assertPublicOutputs(t, d)
 				}
 			}
 		})
@@ -104,7 +105,7 @@ func TestAccKeyIDFormats(t *testing.T) {
 	config := func(format string) string {
 		return fmt.Sprintf("data \"jwks_from_key\" \"test\" {\nkey = %q\nkid_format = %q\n}", base64.StdEncoding.EncodeToString(der), format)
 	}
-	check := resource.TestCheckResourceAttrWith("data.jwks_from_key.test", "jwks", func(value string) error {
+	check := resource.TestCheckResourceAttrWith("data.jwks_from_key.test", "jwk", func(value string) error {
 		var key map[string]interface{}
 		if err := json.Unmarshal([]byte(value), &key); err != nil {
 			return err

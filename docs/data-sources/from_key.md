@@ -124,4 +124,5 @@ data "jwks_from_key" "mldsa44_seed_raw" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `jwks` (String) The calculated JSON Web Key Sets.
+- `jwk` (String) A single public JWK containing only public key primitives and configured `alg`, `kid`, `use`. Private parameters are omitted, including when the input is a private key.
+- `jwks` (String) A JSON Web Key Set: `{"keys": [<jwk>]}`. Previously this attribute contained a single object; use `jwk` for that shape.

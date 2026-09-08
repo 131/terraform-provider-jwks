@@ -50,4 +50,5 @@ data "jwks_from_certificate" "gitlab_registry" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `jwks` (String) The calculated JWKS
+- `jwk` (String) A single public JWK containing only public key primitives and configured `alg`, `kid`, `use`. Certificate metadata is omitted.
+- `jwks` (String) A JSON Web Key Set: `{"keys": [<jwk>]}`. Previously this attribute contained a single object; use `jwk` for that shape.
