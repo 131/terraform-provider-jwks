@@ -1,3 +1,10 @@
+data "jwks_from_key" "registry" {
+  key        = file("${path.module}/public.pem")
+  kid_format = "libtrust"
+  use        = "sig"
+  alg        = "RS256"
+}
+
 data "jwks_from_key" "pem_example" {
   key = <<EOF
 -----BEGIN PUBLIC KEY-----

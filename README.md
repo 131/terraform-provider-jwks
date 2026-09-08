@@ -74,6 +74,24 @@ It stays stable when a certificate is renewed with the same public key. An
 explicit `kid` takes precedence over `kid_format`. Certificate metadata (`x5c`
 and `x5t#S256`) is unchanged.
 
+The same format is available for public and private keys:
+
+```hcl
+data "jwks_from_key" "registry" {
+  key        = file("${path.module}/public.pem")
+  kid_format = "libtrust"
+  use        = "sig"
+  alg        = "RS256"
+}
+```
+
+For `jwks_from_key`, `kid_format` defaults to `"none"`, leaving `kid` unset.
+An explicit `kid` takes precedence. Private keys use their public component,
+so public and private inputs produce the same ID. The `libtrust` format
+requires a public key supported by Go's `x509.MarshalPKIXPublicKey`; unsupported
+key types return an error. Existing key formats remain usable with `"none"`
+or an explicit `kid`.
+
 ## Development
 
 To use a local build before publishing:

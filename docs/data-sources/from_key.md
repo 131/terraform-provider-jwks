@@ -26,6 +26,19 @@ ML-DSA PKIX and PKCS#8 PEM files can be generated with Go 1.27+ using `crypto/x5
 
 ## Example Usage
 
+For Docker/libtrust key IDs, compatible with GitLab registry tokens:
+
+```terraform
+data "jwks_from_key" "registry" {
+  key        = file("${path.module}/public.pem")
+  kid_format = "libtrust"
+  use        = "sig"
+  alg        = "RS256"
+}
+```
+
+Public and private keys produce the same ID from the public component.
+
 ```terraform
 data "jwks_from_key" "pem_example" {
   key = <<EOF
@@ -101,6 +114,8 @@ data "jwks_from_key" "mldsa44_seed_raw" {
 - `key` (String) Requires a PEM-encoded or base64 DER-encoded public or private key. ML-DSA public keys may be provided in PKIX PEM format (`BEGIN PUBLIC KEY`) or as raw base64-encoded bytes. ML-DSA private seeds may be provided in PKCS#8 PEM format (`BEGIN PRIVATE KEY`) or as a raw base64-encoded 32-byte seed (requires `alg`).
 
 ### Optional
+
+- `kid_format` (String) Format of the generated kid: `none` (default) leaves kid unset; `libtrust` uses the Docker/libtrust public-key ID, compatible with GitLab registry tokens (SHA-256 of DER SubjectPublicKeyInfo, first 30 bytes, uppercase base32 in colon-separated groups of four). Private keys use their public component. Requires a key supported by Go's `x509.MarshalPKIXPublicKey`. An explicit `kid` takes precedence.
 
 - `alg` (String) Used to populate the `alg` field of the JWK. Required when providing a raw 32-byte ML-DSA private seed to identify the parameter set (`ML-DSA-44`, `ML-DSA-65`, or `ML-DSA-87`). Not required for PKCS#8 PEM, which is self-describing.
 - `kid` (String) Used to populate the `kid` field of the JWK.

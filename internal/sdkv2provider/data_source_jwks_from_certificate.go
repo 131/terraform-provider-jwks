@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base32"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -160,17 +159,7 @@ func calculateCertificateKeyID(certificate *x509.Certificate, format string) (st
 	case "certificate":
 		return calculateCertificateThumbprint(certificate), nil
 	case "libtrust":
-		der, err := x509.MarshalPKIXPublicKey(certificate.PublicKey)
-		if err != nil {
-			return "", fmt.Errorf("encoding public key for libtrust kid: %w", err)
-		}
-		digest := sha256.Sum256(der)
-		encoded := base32.StdEncoding.EncodeToString(digest[:30])
-		groups := make([]string, 0, len(encoded)/4)
-		for i := 0; i < len(encoded); i += 4 {
-			groups = append(groups, encoded[i:i+4])
-		}
-		return strings.Join(groups, ":"), nil
+		return calculateLibtrustKeyID(certificate.PublicKey)
 	default:
 		return "", fmt.Errorf("unsupported kid_format %q", format)
 	}

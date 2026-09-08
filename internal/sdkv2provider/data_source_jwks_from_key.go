@@ -17,6 +17,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -51,6 +52,13 @@ func dataSourceJwksFromKeySchema() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: `Used to populate the use field of the JWK.`,
+		},
+		"kid_format": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Default:      "none",
+			ValidateFunc: validation.StringInSlice([]string{"none", "libtrust"}, false),
+			Description:  `Format of the generated kid: none (default) leaves kid unset; libtrust uses the Docker/libtrust public-key ID, compatible with GitLab registry tokens (SHA-256 of DER SubjectPublicKeyInfo, first 30 bytes, uppercase base32 in colon-separated groups of four). Private keys use their public component. Requires a key supported by Go's x509.MarshalPKIXPublicKey. An explicit kid takes precedence.`,
 		},
 		"alg": {
 			Type:        schema.TypeString,
@@ -116,6 +124,13 @@ func dataSourceJwksFromKeyRead(_ context.Context, d *schema.ResourceData, m inte
 		return diag.FromErr(err)
 	}
 	kid, ok := d.GetOk("kid")
+	if !ok && d.Get("kid_format").(string) == "libtrust" {
+		kid, err = calculateLibtrustKeyID(keyData)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		ok = true
+	}
 	if ok {
 		err = key.Set(jwk.KeyIDKey, kid.(string))
 		if err != nil {
