@@ -99,9 +99,9 @@ make checks  # fmt, vet, staticcheck, gosec
 GitHub Actions runs acceptance tests, `go vet`, and a build on pushes and pull
 requests. The build workflow can also be started manually.
 
-Pushing a `v*` tag runs tests and GoReleaser, which builds the provider archives,
-signs SHA-256 checksums, and creates a draft GitHub release. Configure the
+Pushing a `v*` tag runs GoReleaser, which builds the provider archives,
+signs SHA-256 checksums, and publishes the GitHub release directly, as in the
+`restapi` and `ovh` providers. Tests run in the separate build workflow. Configure the
 repository secrets `GPG_PRIVATE_KEY` and `PASSPHRASE`, as for the other `131`
 Terraform providers. `GITHUB_TOKEN` is supplied automatically by GitHub Actions.
-Publish the draft release when its assets are ready for Terraform Registry;
-register the signing public key in the `131` namespace.
+Register the signing public key in the `131` Terraform Registry namespace.
