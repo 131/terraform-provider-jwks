@@ -3,7 +3,7 @@ module github.com/131/terraform-provider-jwks
 go 1.26.2
 
 require (
-	filippo.io/mldsa v0.0.0-20260215214346-43d0283efc3e
+	filippo.io/mldsa v1.0.0
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-mux v0.23.1
